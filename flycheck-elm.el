@@ -1,3 +1,10 @@
+;;; flycheck-elm.el --- Flycheck support for the elm language
+;;; Commentary:
+;;; Usage: (eval-after-load 'flycheck
+;;;          '(add-hook 'flycheck-mode-hook #'flycheck-elm-setup))
+
+;;; Code:
+
 (require 'json)
 (require 'dash)
 (require 'flycheck)
@@ -52,3 +59,4 @@
   (add-to-list 'flycheck-checkers 'elm))
 
 (provide 'flycheck-elm)
+;;; flycheck.elm ends here
