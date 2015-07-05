@@ -1,53 +1,54 @@
-;; [
-;;     {
-;;         "details": "",
-;;         "file": "Sample.elm",
-;;         "overview": "Cannot find variable `text`",
-;;         "region": {
-;;             "end": {
-;;                 "column": 12,
-;;                 "line": 3
-;;             },
-;;             "start": {
-;;                 "column": 8,
-;;                 "line": 3
-;;             }
-;;         },
-;;         "subregion": null,
-;;         "suggestions": [],
-;;         "tag": "NAMING ERROR",
-;;         "type": "error"
-;;     }
-;; ]
-
 (require 'json)
 (require 'dash)
 (require 'flycheck)
 
-(setq sdata  "[{\"subregion\":null,\"suggestions\":[],\"details\":\"\",\"region\":{\"end\":{\"column\":12,\"line\":3},\"start\":{\"column\":8,\"line\":3}},\"type\":\"error\",\"file\":\"Sample.elm\",\"tag\":\"NAMING ERROR\",\"overview\":\"Cannot find variable `text`\"}]")
-
-(flycheck-ad)
-
-(defun elm-error-to-flycheck-error (error)
+(defun flycheck-elm-decode-elm-error (error checker buffer)
   (let* ((region (assoc 'region error))
          (start (assoc 'start region))
          (start-col (cdr (assoc 'column start)))
          (start-line (cdr (assoc 'line start))))
-    '(:line start-line :column start-col :message overview :level 'error)))
+    (flycheck-error-new
+     :checker checker
+     :buffer buffer
+     :filename (cdr (assoc 'file error))
+     :line start-line
+     :column start-col
+     :message (cdr (assoc 'overview error))
+     :level (flycheck-elm-decode-type error))))
 
-(defun elm-parse-errors (sdata)
-  "Parse elm json output errors"
+(defun flycheck-elm-decode-type (error)
+  (let ((type (cdr (assoc 'type error))))
+    (pcase type
+      (`"warning" 'warning)
+      (`"error" 'error)
+      (_ 'warning))))
+
+(defun flycheck-elm-read-json (str)
+  (condition-case nil
+      (json-read-from-string str)
+    (error nil)))
+
+(defun flycheck-elm-parse-error-data (data)
   (let* ((json-array-type 'list)
-         (data (json-read-from-string sdata)))
-    (-map 'elm-error-to-flycheck-error data)))
+         (adata (split-string data "\n")))
+    (-map 'car (-map 'flycheck-elm-read-json adata))))
 
-(elm-parse-errors sdata)
+(defun flycheck-elm-parse-errors (output checker buffer)
+  "Decode elm json output errors"
+  (let* ((data (flycheck-elm-parse-error-data output))
+         (errors (-map (lambda (x) (flycheck-elm-decode-elm-error x checker buffer)) data)))
+    errors))
 
+(flycheck-define-checker elm
+  "A syntax checker for elm-mode using the json output from elm-make"
+  :command ("elm-make" "--report=json" source)
+  :error-parser flycheck-elm-parse-errors
+  :modes elm-mode)
 
+;;;###autoload
+(defun flycheck-elm-setup ()
+  "Setup Flycheck elm"
+  (interactive)
+  (add-to-list 'flycheck-checkers 'elm))
 
-
-;; (flycheck-define-checker elm
-;;   "A syntax checker for elm-mode using the json output from elm-make"
-;;   :command ("elm-make" "--report=json" source)
-;;   :error-parser elm-parse-error-json
-;;   :modes (elm-mode))
+(provide 'flycheck-elm)
