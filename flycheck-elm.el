@@ -6,7 +6,6 @@
 ;;; Code:
 
 (require 'json)
-(require 'dash)
 (require 'flycheck)
 
 (defun flycheck-elm-decode-elm-error (error checker buffer)
@@ -38,12 +37,12 @@
 (defun flycheck-elm-parse-error-data (data)
   (let* ((json-array-type 'list)
          (adata (split-string data "\n")))
-    (-map 'car (-map 'flycheck-elm-read-json adata))))
+    (mapcar 'car (mapcar 'flycheck-elm-read-json adata))))
 
 (defun flycheck-elm-parse-errors (output checker buffer)
-  "Decode elm json output errors"
+  "Decode elm json output errors."
   (let* ((data (flycheck-elm-parse-error-data output))
-         (errors (-map (lambda (x) (flycheck-elm-decode-elm-error x checker buffer)) data)))
+         (errors (mapcar (lambda (x) (flycheck-elm-decode-elm-error x checker buffer)) data)))
     errors))
 
 (flycheck-define-checker elm
@@ -54,9 +53,9 @@
 
 ;;;###autoload
 (defun flycheck-elm-setup ()
-  "Setup Flycheck elm"
+  "Setup Flycheck elm."
   (interactive)
   (add-to-list 'flycheck-checkers 'elm))
 
 (provide 'flycheck-elm)
-;;; flycheck.elm ends here
+;;; flycheck-elm.el ends here

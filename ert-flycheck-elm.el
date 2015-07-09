@@ -20,6 +20,8 @@
 ;;     }
 ;; ]
 
+;;; Code:
+
 (require 'flycheck-elm)
 (require 'json)
 
