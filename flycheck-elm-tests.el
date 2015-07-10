@@ -78,9 +78,20 @@
               (flycheck-elm-decode-type data)
               'error))))
 
+(defun flycheck-elm-filter-by-type (type lst)
+  "Return a new LIST of errors of type TYPE."
+  (remove-if-not
+   (lambda (x)(equal (flycheck-elm-decode-type x) type))
+   lst))
+
 (ert-deftest test-parse-multiple-errors-and-warning ()
   "Test that output containing errors and warnings get decoded successfully."
-  (should (= (length
-              (flycheck-elm-parse-error-data mdata))
-             7)))
+  (let (parsed (flycheck-elm-parse-error-data mdata))
+    (should (= 8 (length parsed)))))
+
+(ert-deftest test-filter-by-error ()
+  "Test that we can filter out by certain error types."
+  (let (parsed (flycheck-elm-parse-error-data mdata))
+    (should (= 1 (length (flycheck-elm-filter-by-type 'error))))
+    (should (= 7 (length (flycheck-elm-filter-by-type 'warning))))))
 ;;; flycheck-elm-tests.el ends here
