@@ -84,13 +84,12 @@
          (errors (flycheck-elm-filter-by-preference data)))
     (mapcar
      (lambda (x) (flycheck-elm-decode-elm-error x checker buffer))
-     data)))
+     errors)))
 
 (defun flycheck-elm-filter-by-preference (lst &optional pref)
   "Filter the lst by user preference."
   (let ((errors (flycheck-elm-filter-by-type 'error lst)))
     (or pref (set 'pref flycheck-elm-reporting-mode))
-    (message "filter by: %s" pref)
     (pcase pref
       (`errors-only errors)
       (`warn-after-errors
