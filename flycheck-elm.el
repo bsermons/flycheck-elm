@@ -59,8 +59,10 @@
 
 (defun flycheck-elm-parse-error-data (data)
   (let* ((json-array-type 'list)
-         (adata (split-string data "\n")))
-    (car (mapcar 'flycheck-elm-read-json adata))))
+         (mapdata (mapcar
+                   'flycheck-elm-read-json
+                   (split-string data "\n"))))
+    (append (car mapdata) (car (cdr mapdata)))))
 
 (defun flycheck-elm-parse-errors (output checker buffer)
   "Decode elm json output errors."
