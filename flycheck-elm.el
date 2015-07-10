@@ -31,6 +31,20 @@
 (require 'json)
 (require 'flycheck)
 
+(defgroup flycheck-elm nil
+  "Elm support for Flycheck."
+  :prefix "flycheck-elm-"
+  :group 'flycheck
+  :link '(url-link :tag "Github" "https://github.com/bsermons/flycheck-elm"))
+
+(defcustom flycheck-elm-report-types nil
+  "*Types of messages to show."
+  :type '(choice
+          (const :tag "Show warnings and errors." nil)
+          (const :tag "Show only errors." errors)
+          (const :tag "Show warnings only if no errors occur." warn-after))
+  :group 'flycheck-elm)
+
 (defun flycheck-elm-decode-elm-error (error checker buffer)
   (let* ((region (assoc 'region error))
          (start (assoc 'start region))
@@ -67,10 +81,29 @@
 (defun flycheck-elm-parse-errors (output checker buffer)
   "Decode elm json output errors."
   (let* ((data (flycheck-elm-parse-error-data output))
-         (errors (mapcar
-                  (lambda (x) (flycheck-elm-decode-elm-error x checker buffer))
-                  data)))
-    errors))
+         (errors (flycheck-elm-filter-by-preference data)))
+    (mapcar
+     (lambda (x) (flycheck-elm-decode-elm-error x checker buffer))
+     data)))
+
+(defun flycheck-elm-filter-by-preference (lst &optional pref)
+  "Filter the lst by user preference."
+  (let ((errors (flycheck-elm-filter-by-type 'error lst)))
+    (or pref (set 'pref flycheck-elm-report-types))
+    (message "pref=%s" pref)
+    (pcase pref 
+      (`errors (message "only errors") errors)
+      (`warn-after (message "warning after errors")
+                   (pcase (length errors)
+                     (0 (flycheck-elm-filter-by-type 'warning lst))
+                     (t errors)))
+      (_ (message "everythig") lst))))
+
+(defun flycheck-elm-filter-by-type (type lst)
+  "Return a new LIST of errors of type TYPE."
+  (remove-if-not
+   (lambda (x)(equal (flycheck-elm-decode-type x) type))
+   lst))
 
 (flycheck-define-checker elm
   "A syntax checker for elm-mode using the json output from elm-make"
