@@ -37,12 +37,12 @@
   :group 'flycheck
   :link '(url-link :tag "Github" "https://github.com/bsermons/flycheck-elm"))
 
-(defcustom flycheck-elm-report-types nil
+(defcustom flycheck-elm-reporting-mode 'all
   "*Types of messages to show."
   :type '(choice
-          (const :tag "Show warnings and errors." nil)
-          (const :tag "Show only errors." errors)
-          (const :tag "Show warnings only if no errors occur." warn-after))
+          (const :tag "Show warnings and errors." all)
+          (const :tag "Show only errors." errors-only)
+          (const :tag "Show warnings only if no errors occur." warn-after-errors))
   :group 'flycheck-elm)
 
 (defun flycheck-elm-decode-elm-error (error checker buffer)
@@ -89,15 +89,15 @@
 (defun flycheck-elm-filter-by-preference (lst &optional pref)
   "Filter the lst by user preference."
   (let ((errors (flycheck-elm-filter-by-type 'error lst)))
-    (or pref (set 'pref flycheck-elm-report-types))
-    (message "pref=%s" pref)
-    (pcase pref 
-      (`errors (message "only errors") errors)
-      (`warn-after (message "warning after errors")
-                   (pcase (length errors)
-                     (0 (flycheck-elm-filter-by-type 'warning lst))
-                     (t errors)))
-      (_ (message "everythig") lst))))
+    (or pref (set 'pref flycheck-elm-reporting-mode))
+    (message "filter by: %s" pref)
+    (pcase pref
+      (`errors-only errors)
+      (`warn-after-errors
+       (pcase (length errors)
+         (0 (flycheck-elm-filter-by-type 'warning lst))
+         (t errors)))
+      (_  lst))))
 
 (defun flycheck-elm-filter-by-type (type lst)
   "Return a new LIST of errors of type TYPE."
