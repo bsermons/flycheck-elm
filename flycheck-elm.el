@@ -28,6 +28,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'json)
 (require 'flycheck)
 
@@ -100,7 +101,7 @@
 
 (defun flycheck-elm-filter-by-type (type lst)
   "Return a new LIST of errors of type TYPE."
-  (remove-if-not
+  (cl-remove-if-not
    (lambda (x)(equal (flycheck-elm-decode-type x) type))
    lst))
 
