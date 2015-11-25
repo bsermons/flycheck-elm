@@ -105,9 +105,20 @@
    (lambda (x)(equal (flycheck-elm-decode-type x) type))
    lst))
 
+(flycheck-def-option-var flycheck-elm-main-file nil elm
+  "A main elm file for flycheck-elm to compile instead of individual files.
+
+The value of this variable is either nil, in which case
+flycheck-elm will compile individual files when checking them, or
+a string with the path to the main elm file within your
+project. The main elm file is the .elm file which contains a
+\"main\" function, for example: \"Main.elm\")."
+  :type '(string))
+
 (flycheck-define-checker elm
   "A syntax checker for elm-mode using the json output from elm-make"
-  :command ("elm-make" "--report=json" source)
+  :command ("elm-make" "--report=json"
+            (eval (or flycheck-elm-main-file buffer-file-name)))
   :error-parser flycheck-elm-parse-errors
   :modes elm-mode)
 
