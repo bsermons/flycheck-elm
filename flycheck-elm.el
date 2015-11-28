@@ -115,9 +115,21 @@ project. The main elm file is the .elm file which contains a
 \"main\" function, for example: \"Main.elm\")."
   :type '(string))
 
+(flycheck-def-option-var flycheck-elm-output-file "index.html" elm
+  "The output file to compile to when performing syntax checking.
+
+The value of this variable is passed as the --ouput argument to
+elm-make whenever flycheck-elm performs syntax checking. This
+defaults to index.html, but can be set to any file with a .js or
+.html extension. Please note that the contents of this file will
+be overwritten every time flycheck-elm successfully compiles
+your Elm code."
+  :type '(string))
+
 (flycheck-define-checker elm
   "A syntax checker for elm-mode using the json output from elm-make"
   :command ("elm-make" "--report=json"
+            (eval (concat "--output=" flycheck-elm-output-file))
             (eval (or flycheck-elm-main-file buffer-file-name)))
   :error-parser flycheck-elm-parse-errors
   :modes elm-mode)
