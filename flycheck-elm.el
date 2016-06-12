@@ -48,6 +48,9 @@
 
 (defun flycheck-elm-decode-elm-error (error checker buffer)
   (let* ((region (assoc 'region error))
+         (tag (concat "[" (cdr (assoc 'tag error)) "]"))
+         (overview (cdr (assoc 'overview error)))
+         (details (cdr (assoc 'details error)))
          (start (assoc 'start region))
          (start-col (cdr (assoc 'column start)))
          (start-line (cdr (assoc 'line start))))
@@ -57,7 +60,7 @@
      :filename (cdr (assoc 'file error))
      :line start-line
      :column start-col
-     :message (cdr (assoc 'overview error))
+     :message (s-join "\n" (list tag overview details))
      :level (flycheck-elm-decode-type error))))
 
 (defun flycheck-elm-decode-type (error)
