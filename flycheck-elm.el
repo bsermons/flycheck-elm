@@ -99,7 +99,7 @@
       (`warn-after-errors
        (pcase (length errors)
          (0 (flycheck-elm-filter-by-type 'warning lst))
-         (t errors)))
+         (_ errors)))
       (_  lst))))
 
 (defun flycheck-elm-filter-by-type (type lst)
