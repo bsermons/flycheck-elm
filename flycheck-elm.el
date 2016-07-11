@@ -60,7 +60,7 @@
      :filename (cdr (assoc 'file error))
      :line start-line
      :column start-col
-     :message (s-join "\n" (list tag overview details))
+     :message (mapconcat 'identity (list tag overview details) "\n")
      :level (flycheck-elm-decode-type error))))
 
 (defun flycheck-elm-decode-type (error)
