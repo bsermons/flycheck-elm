@@ -3,7 +3,7 @@
 ;; Copyright (c) 2015 Brian Sermons
 
 ;; Author: Brian Sermons
-;; Package-Requires: ((flycheck "0.24") (emacs "24.4"))
+;; Package-Requires: ((flycheck "0.29-cvs") (emacs "24.4"))
 ;; URL: https://github.com/bsermons/flycheck-elm
 
 ;; This file is not part of GNU Emacs.
@@ -108,6 +108,10 @@
    (lambda (x)(equal (flycheck-elm-decode-type x) type))
    lst))
 
+(defun flycheck-elm-package-json-directory (&optional checker)
+  "Find the directory in which CHECKER should run \"elm-make\"."
+  (locate-dominating-file default-directory "elm-package.json"))
+
 (flycheck-def-option-var flycheck-elm-output-file nil elm
   "The output file to compile to when performing syntax checking.
 
@@ -144,6 +148,8 @@ project. The main elm file is the .elm file which contains a
             (eval (or flycheck-elm-main-file buffer-file-name))
             (eval (concat  "--output=" (or flycheck-elm-output-file "/dev/null"))))
   :error-parser flycheck-elm-parse-errors
+  :default-directory flycheck-elm-package-json-directory
+  :predicate flycheck-elm-package-json-directory
   :modes elm-mode)
 
 ;;;###autoload
