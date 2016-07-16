@@ -151,7 +151,7 @@ project. The main elm file is the .elm file which contains a
             (eval (or flycheck-elm-main-file buffer-file-name))
             (eval (concat  "--output=" (or flycheck-elm-output-file "/dev/null"))))
   :error-parser flycheck-elm-parse-errors
-  :default-directory flycheck-elm-package-json-directory
+  :working-directory flycheck-elm-package-json-directory
   :predicate flycheck-elm-package-json-directory
   :modes elm-mode)
 
