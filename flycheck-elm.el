@@ -74,9 +74,11 @@
       (_ 'unknown))))
 
 (defun flycheck-elm-read-json (str)
-  (condition-case nil
-      (json-read-from-string str)
-    (error nil)))
+  "Read json from STR, use elisp lists rather than vectors."
+  (let ((json-array-type 'list))
+    (condition-case nil
+        (json-read-from-string str)
+      (error nil))))
 
 (defun flycheck-elm-parse-error-data (data)
   (let* ((json-array-type 'list)
@@ -86,12 +88,19 @@
     (append (car mapdata) (car (cdr mapdata)))))
 
 (defun flycheck-elm-parse-errors (output checker buffer)
-  "Decode elm json output errors."
-  (let* ((data (flycheck-elm-parse-error-data output))
-         (errors (flycheck-elm-filter-by-preference data)))
-    (mapcar
-     (lambda (x) (flycheck-elm-decode-elm-error x checker buffer))
-     errors)))
+  "Decode elm json OUTPUT errors from elm-make CHECKER in BUFFER.
+As of Elm 0.17.1, there are a few edge cases in which elm-make does not
+output json even with the --report=json flag.  When the OUTPUT is json
+`flycheck-elm-read-json' returns non-nil with the parsed data.  If it fails
+we process OUTPUT as a regular Elm error message."
+  (let ((errors (flycheck-elm-read-json output)))
+    (cond
+     ((not (null errors))
+      (mapcar (lambda (x) (flycheck-elm-decode-elm-error x checker buffer))
+                (flycheck-elm-filter-by-preference errors)))
+     ((flycheck-elm-plain-error-check output)
+      (flycheck-elm-plain-decode-error output checker buffer))
+     (t '()))))
 
 (defun flycheck-elm-filter-by-preference (lst &optional pref)
   "Filter the lst by user preference."
@@ -114,6 +123,83 @@
 (defun flycheck-elm-package-json-directory (&optional checker)
   "Find the directory in which CHECKER should run \"elm-make\"."
   (locate-dominating-file default-directory "elm-package.json"))
+
+(defvar flycheck-elm-plain-regex-line-number "^\\([0-9]*\\)|"
+  "Line starting with one or more digits, flowed by a pipe character.")
+
+(defvar flycheck-elm-plain-regex-columns "^[ ]*\\(\\^+\\)"
+  "Line starting with any number of spaces and one or more carets.")
+
+(defvar flycheck-elm-plain-regex-tag "^-- \\([A-Z]* [A-Z]*\\|[A-Z]*\\) -+"
+  "Match title line for SYNTAX ERRORS, and possibly other types.")
+
+(defun flycheck-elm-plain-columns ()
+  "Grab match data for columns.
+Uses previously completed `flycheck-elm-plain-regex-columns' match."
+  (cons (1+ (match-beginning 1))
+        (match-end 1)))
+
+(defun flycheck-elm-plain-error-check (output)
+  "Check for elm-make output for success.
+If elm-make exits without errors its OUTPUT is a string starting
+with \"Successfully generated\"."
+  (not (string-match "^Successfully generated" output)))
+
+(defun flycheck-elm-plain-line-number (line)
+  "Grab match data for line number in LINE.
+Uses previously completed `flycheck-elm-plain-regex-row' match."
+  (flycheck-string-to-number-safe (match-string 1 line)))
+
+(defun flycheck-elm-plain-tag (line)
+    "Grab match data for error tag from LINE.
+Uses previously completed `flycheck-elm-plain-regex-tag' match."
+    (match-string 1 line))
+
+(defun flycheck-elm-plain-message (lines &optional l c m)
+  "Build flycheck error properties from LINES.
+Construct the properties line number 'L, column number C andthe message M."
+  (let ((line (car lines))
+        (rest (cdr lines)))
+    (cond
+     ;; Return an alist. If line number not found set it to zero
+     ((null lines)
+      (list (cons 'line (or l 0))
+            (cons 'column (or c 0))
+            (cons 'message m)))
+     ;; If title line, grab title
+     ((string-match flycheck-elm-plain-regex-tag line)
+      (let ((tag (flycheck-elm-plain-tag line)))
+        (flycheck-elm-plain-message rest l c (concat "[" tag "]" m))))
+     ;; If column indicating line, grab column data
+     ((string-match flycheck-elm-plain-regex-columns line)
+      (let ((columns (flycheck-elm-plain-columns)))
+        (flycheck-elm-plain-message rest l (car columns) m)))
+     ;; Capture the line number if the message includes it
+     ((string-match flycheck-elm-plain-regex-line-number line)
+      (let ((row (flycheck-elm-plain-line-number line)))
+        (flycheck-elm-plain-message rest row c m)))
+     ;; Otherwise concat current line onto the message with a newline between
+     (t
+      (flycheck-elm-plain-message rest l c (concat m "\n" line))))))
+
+(defun flycheck-elm-plain-decode-error (output checker buffer)
+  "Decode elm regular OUTPUT errors from CHECKER in BUFFER.
+This is an edge case for handling some odd output from elm-make.
+In some situtions elm-make does not output json errors, even when
+provided the --report=json flag."
+  ;; Should this type of message go through `flycheck-elm-filter-by-preference'?
+  ;; It seems when elm-make emits this type of error, it emits it and stops
+  ;; checking the rest of the file. So there is only one message, which needs to
+  ;; be fixed before elm-make can be used to detect the remaining errors.
+  (let ((data (flycheck-elm-plain-message (split-string output "\n+"))))
+    (list (flycheck-error-new
+           :checker checker
+           :buffer buffer
+           :filename (buffer-file-name buffer)
+           :line (cdr (assoc 'line data))
+           :column (cdr (assoc 'column data))
+           :message (cdr (assoc 'message data))
+           :level 'error))))
 
 (flycheck-def-option-var flycheck-elm-output-file nil elm
   "The output file to compile to when performing syntax checking.
