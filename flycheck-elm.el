@@ -141,7 +141,7 @@ Uses previously completed `flycheck-elm-plain-regex-columns' match."
 
 (defun flycheck-elm-plain-line-number (line)
   "Grab match data for line number in LINE.
-Uses previously completed `flycheck-elm-plain-regex-row' match."
+Uses previously completed `flycheck-elm-plain-regex-line-number' match."
   (flycheck-string-to-number-safe (match-string 1 line)))
 
 (defun flycheck-elm-plain-tag (line)
@@ -176,8 +176,8 @@ Construct the properties line number 'L, column number C and the message M."
         (flycheck-elm-plain-message rest l (car columns) m)))
      ;; Grab line number
      ((string-match flycheck-elm-plain-regex-line-number line)
-      (let ((row (flycheck-elm-plain-line-number line)))
-        (flycheck-elm-plain-message rest row c m)))
+      (let ((line-number (flycheck-elm-plain-line-number line)))
+        (flycheck-elm-plain-message rest line-number c m)))
      ;; Otherwise concat current line onto the message with a newline between
      (t
       (flycheck-elm-plain-message rest l c (concat m "\n" line))))))
