@@ -169,18 +169,18 @@ Construct the properties line number 'L, column number C and the message M."
      ;; Grab title
      ((string-match flycheck-elm-plain-regex-tag line)
       (let ((tag (flycheck-elm-plain-tag line)))
-        (flycheck-elm-plain-message rest l c (concat "[" tag "]" m))))
+        (flycheck-elm-plain-parse-data rest l c (concat "[" tag "]" m))))
      ;; Grab column data
      ((string-match flycheck-elm-plain-regex-columns line)
       (let ((columns (flycheck-elm-plain-columns)))
-        (flycheck-elm-plain-message rest l (car columns) m)))
+        (flycheck-elm-plain-parse-data rest l (car columns) m)))
      ;; Grab line number
      ((string-match flycheck-elm-plain-regex-line-number line)
       (let ((line-number (flycheck-elm-plain-line-number line)))
-        (flycheck-elm-plain-message rest line-number c m)))
+        (flycheck-elm-plain-parse-data rest line-number c m)))
      ;; Otherwise concat current line onto the message with a newline between
      (t
-      (flycheck-elm-plain-message rest l c (concat m "\n" line))))))
+      (flycheck-elm-plain-parse-data rest l c (concat m "\n" line))))))
 
 (defun flycheck-elm-plain-parse-error (output checker buffer)
   "Decode elm regular OUTPUT errors from CHECKER in BUFFER.
