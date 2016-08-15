@@ -103,6 +103,29 @@
     (should (= 1 (length (flycheck-elm-filter-by-preference all 'warn-after-errors))))
     (should (= 7 (length (flycheck-elm-filter-by-preference warnings 'warn-after-errors))))))
 
+(ert-deftest test-plain-line-numbers ()
+  "Insure the line number is parsed correctly"
+  (let ((line "55| getMore : Thing -> More"))
+    (should (= 55 (progn
+                    (string-match flycheck-elm-plain-regex-line-number line)
+                    (flycheck-elm-plain-line-number line))))))
+
+(ert-deftest test-plain-columns ()
+  "Insure the column numbers are parsed correctly"
+  (let ((line "    ^^^^"))
+    (should (equal (cons 5 8) (progn
+                                (string-match flycheck-elm-plain-regex-columns line)
+                                (flycheck-elm-plain-columns))))))
+
+(ert-deftest test-plain-tag ()
+  "Insure the title tag is parsed correctly"
+  (let ((line "-- SYNTAX PROBLEM ----------------------- Main.elm"))
+    (should (equal
+             (progn
+               (string-match flycheck-elm-plain-regex-tag line)
+               (flycheck-elm-plain-tag line))
+             "SYNTAX PROBLEM"))))
+
 ;; Example errors
 
 (setq single-error  "[{\"subregion\":null,\"suggestions\":[],\"details\":\"\",\"region\":{\"end\":{\"column\":12,\"line\":3},\"start\":{\"column\":8,\"line\":3}},\"type\":\"error\",\"file\":\"Sample.elm\",\"tag\":\"NAMING ERROR\",\"overview\":\"Cannot find variable `text`\"}]")
