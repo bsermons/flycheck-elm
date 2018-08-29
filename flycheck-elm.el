@@ -60,7 +60,9 @@
     (flycheck-error-new
      :checker checker
      :buffer buffer
-     :filename (cdr (assoc 'file error))
+     :filename (or
+                (cdr (assoc 'path error))
+                (cdr (assoc 'file error)))
      :line start-line
      :column start-col
      :message (mapconcat 'identity (list tag overview details) "\n")
@@ -113,7 +115,9 @@
 
 (defun flycheck-elm-package-json-directory (&optional checker)
   "Find the directory in which CHECKER should run \"elm-make\"."
-  (locate-dominating-file default-directory "elm-package.json"))
+  (or
+   (locate-dominating-file default-directory "elm.json")
+   (locate-dominating-file default-directory "elm-package.json")))
 
 (flycheck-def-option-var flycheck-elm-output-file nil elm
   "The output file to compile to when performing syntax checking.
@@ -146,8 +150,14 @@ project. The main elm file is the .elm file which contains a
   :type '(string))
 
 (flycheck-define-checker elm
-  "A syntax checker for elm-mode using the json output from elm-make"
-  :command ("elm-make" "--report=json"
+  "A syntax checker for elm-mode using the json output from elm-make.
+Users of Elm 0.19 should set `flycheck-elm-executable' to \"elm\", e.g.
+via customization or per-project directory-local variables."
+  :command ("elm-make"
+            (eval (and flycheck-elm-executable
+                       (not (string-match-p "elm-make" flycheck-elm-executable))
+                       "make"))
+            "--report=json"
             (eval (or flycheck-elm-main-file buffer-file-name))
             (eval (concat  "--output=" (or flycheck-elm-output-file "/dev/null"))))
   :error-parser flycheck-elm-parse-errors
