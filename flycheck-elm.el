@@ -69,15 +69,14 @@
       (_ 'unknown))))
 
 (defun flycheck-elm-read-json (str)
-  (condition-case nil
-      (json-read-from-string str)
-    (error nil)))
+  (ignore-errors
+    (let ((json-array-type 'list))
+      (json-read-from-string str))))
 
 (defun flycheck-elm-parse-error-data (data)
-  (let* ((json-array-type 'list)
-         (mapdata (mapcar
-                   'flycheck-elm-read-json
-                   (split-string data "\n"))))
+  (let ((mapdata (mapcar
+                  'flycheck-elm-read-json
+                  (split-string data "\n"))))
     (append (car mapdata) (car (cdr mapdata)))))
 
 (defun flycheck-elm-parse-errors (output checker buffer)
@@ -91,8 +90,7 @@
 (defun flycheck-elm-filter-by-preference (lst &optional pref)
   "Filter the lst by user preference."
   (let ((errors (flycheck-elm-filter-by-type 'error lst)))
-    (or pref (set 'pref flycheck-elm-reporting-mode))
-    (pcase pref
+    (pcase (or pref flycheck-elm-reporting-mode)
       (`errors-only errors)
       (`warn-after-errors
        (pcase (length errors)
