@@ -3,7 +3,7 @@
 ;; Copyright (c) 2015 Brian Sermons
 
 ;; Author: Brian Sermons
-;; Package-Requires: ((flycheck "0.29-cvs") (emacs "24.4") (let-alist "1.0.5"))
+;; Package-Requires: ((flycheck "0.29-cvs") (emacs "24.4") (let-alist "1.0.5") (seq "2.20"))
 ;; URL: https://github.com/bsermons/flycheck-elm
 
 ;; This file is not part of GNU Emacs.
@@ -31,7 +31,7 @@
 
 ;;; Code:
 
-(require 'cl-lib)
+(require 'seq)
 (require 'json)
 (require 'flycheck)
 (require 'let-alist)
@@ -100,8 +100,8 @@
 
 (defun flycheck-elm-filter-by-type (type lst)
   "Return a new LIST of errors of type TYPE."
-  (cl-remove-if-not
-   (lambda (x)(equal (flycheck-elm-decode-type x) type))
+  (seq-filter
+   (lambda (x) (equal (flycheck-error-level x) type))
    lst))
 
 (defun flycheck-elm-package-json-directory (&optional checker)
