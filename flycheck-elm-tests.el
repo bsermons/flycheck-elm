@@ -71,6 +71,10 @@
               (flycheck-elm-decode-type data)
               'error))))
 
+(defun parse-with-pref (input pref)
+  (let ((flycheck-elm-reporting-mode pref))
+    (flycheck-elm-parse-errors input nil nil)))
+
 (ert-deftest test-parse-multiple-errors-and-warning ()
   "Test that output containing errors and warnings get decoded successfully."
   (let ((parsed (flycheck-elm-parse-error-data error+warnings)))
@@ -78,30 +82,24 @@
 
 (ert-deftest test-filter-by-error ()
   "Test that we can filter out by certain error types."
-  (let ((parsed (flycheck-elm-parse-error-data error+warnings)))
+  (let ((parsed (parse-with-pref error+warnings 'all)))
     (should (= 1 (length (flycheck-elm-filter-by-type 'error parsed))))
     (should (= 7 (length (flycheck-elm-filter-by-type 'warning parsed))))))
 
 (ert-deftest test-parse-user-preference-all ()
   "Test user preference to show all errors and warnings."
-  (let ((all (flycheck-elm-parse-error-data error+warnings))
-        (warnings (flycheck-elm-parse-error-data warnings-only)))
-    (should (= 8 (length (flycheck-elm-filter-by-preference all 'all))))
-    (should (= 7 (length (flycheck-elm-filter-by-preference warnings 'all))))))
+  (should (= 8 (length (parse-with-pref error+warnings 'all))))
+  (should (= 7 (length (parse-with-pref warnings-only 'all)))))
 
 (ert-deftest test-parse-user-preference-errors-only ()
   "Test user preference to show errors only."
-  (let ((all (flycheck-elm-parse-error-data error+warnings))
-        (warnings (flycheck-elm-parse-error-data warnings-only)))
-    (should (= 1 (length (flycheck-elm-filter-by-preference all 'errors-only))))
-    (should (= 0 (length (flycheck-elm-filter-by-preference warnings 'errors-only))))))
+  (should (= 1 (length (parse-with-pref error+warnings 'errors-only))))
+  (should (= 0 (length (parse-with-pref warnings-only 'errors-only)))))
 
 (ert-deftest test-parse-user-preference-warnings-after-errors ()
   "Test user preference to show warnings after errors."
-  (let ((all (flycheck-elm-parse-error-data error+warnings))
-        (warnings (flycheck-elm-parse-error-data warnings-only)))
-    (should (= 1 (length (flycheck-elm-filter-by-preference all 'warn-after-errors))))
-    (should (= 7 (length (flycheck-elm-filter-by-preference warnings 'warn-after-errors))))))
+  (should (= 1 (length (parse-with-pref error+warnings 'warn-after-errors))))
+  (should (= 7 (length (parse-with-pref warnings-only 'warn-after-errors)))))
 
 ;; Example errors
 

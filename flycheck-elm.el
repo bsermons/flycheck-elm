@@ -81,16 +81,16 @@
 
 (defun flycheck-elm-parse-errors (output checker buffer)
   "Decode elm json output errors."
-  (let* ((data (flycheck-elm-parse-error-data output))
-         (errors (flycheck-elm-filter-by-preference data)))
-    (mapcar
-     (lambda (x) (flycheck-elm-decode-elm-error x checker buffer))
-     errors)))
+  (let* ((data (flycheck-elm-parse-error-data output)))
+    (flycheck-elm-filter-by-preference
+     (mapcar
+      (lambda (x) (flycheck-elm-decode-elm-error x checker buffer))
+      data))))
 
-(defun flycheck-elm-filter-by-preference (lst &optional pref)
+(defun flycheck-elm-filter-by-preference (lst)
   "Filter the lst by user preference."
   (let ((errors (flycheck-elm-filter-by-type 'error lst)))
-    (pcase (or pref flycheck-elm-reporting-mode)
+    (pcase flycheck-elm-reporting-mode
       (`errors-only errors)
       (`warn-after-errors
        (pcase (length errors)
