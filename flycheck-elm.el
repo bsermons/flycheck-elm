@@ -3,7 +3,7 @@
 ;; Copyright (c) 2015 Brian Sermons
 
 ;; Author: Brian Sermons
-;; Package-Requires: ((flycheck "0.29-cvs") (emacs "24.4"))
+;; Package-Requires: ((flycheck "0.29-cvs") (emacs "24.4") (let-alist "1.0.5"))
 ;; URL: https://github.com/bsermons/flycheck-elm
 
 ;; This file is not part of GNU Emacs.
@@ -34,6 +34,7 @@
 (require 'cl-lib)
 (require 'json)
 (require 'flycheck)
+(require 'let-alist)
 
 (defgroup flycheck-elm nil
   "Elm support for Flycheck."
@@ -50,22 +51,14 @@
   :group 'flycheck-elm)
 
 (defun flycheck-elm-decode-elm-error (error checker buffer)
-  (let* ((region (assoc 'region error))
-         (tag (concat "[" (cdr (assoc 'tag error)) "]"))
-         (overview (cdr (assoc 'overview error)))
-         (details (cdr (assoc 'details error)))
-         (start (assoc 'start region))
-         (start-col (cdr (assoc 'column start)))
-         (start-line (cdr (assoc 'line start))))
+  (let-alist error
     (flycheck-error-new
      :checker checker
      :buffer buffer
-     :filename (or
-                (cdr (assoc 'path error))
-                (cdr (assoc 'file error)))
-     :line start-line
-     :column start-col
-     :message (mapconcat 'identity (list tag overview details) "\n")
+     :filename (or .path .file)
+     :line .region.start.line
+     :column .region.start.column
+     :message (mapconcat 'identity (list (concat "[" .tag "]") .overview .details) "\n")
      :level (flycheck-elm-decode-type error))))
 
 (defun flycheck-elm-decode-type (error)
