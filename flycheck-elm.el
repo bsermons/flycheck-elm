@@ -55,11 +55,41 @@
     (flycheck-error-new
      :checker checker
      :buffer buffer
-     :filename (or .path .file)
+     :filename .file
      :line .region.start.line
      :column .region.start.column
      :message (mapconcat 'identity (list (concat "[" .tag "]") .overview .details) "\n")
      :level (flycheck-elm-decode-type error))))
+
+(defun flycheck-elm-decode-compile-problems (checker buffer error)
+  "Extract problems as flycheck errors from Elm 0.19 compile-errors item ERROR."
+  (let-alist error
+    (let ((path
+           (with-current-buffer buffer
+             (file-relative-name
+              (expand-file-name .path (or (flycheck-elm-package-json-directory checker)
+                                          default-directory))))))
+      (mapcar (lambda (p)
+                (let-alist p
+                  (flycheck-error-new
+                   :checker checker
+                   :buffer buffer
+                   :filename path
+                   :line .region.start.line
+                   :column .region.start.column
+                   :message (concat .title ": " (flycheck-elm-flatten-message .message))
+                   :level 'error)))
+              .problems))))
+
+(defun flycheck-elm-flatten-message (msg)
+  "Convert MSG, which is a list of strings or alists describing styled strings, to a single string."
+  (mapconcat (lambda (part)
+               (if (stringp part)
+                   part
+                 (let-alist part
+                   .string)))
+             msg
+             ""))
 
 (defun flycheck-elm-decode-type (error)
   (let ((type (cdr (assoc 'type error))))
@@ -73,19 +103,18 @@
     (let ((json-array-type 'list))
       (json-read-from-string str))))
 
-(defun flycheck-elm-parse-error-data (data)
-  (let ((mapdata (mapcar
-                  'flycheck-elm-read-json
-                  (split-string data "\n"))))
-    (append (car mapdata) (car (cdr mapdata)))))
+(defun flycheck-elm-parse-error-data (data checker buffer)
+  (let ((mapdata (mapcar 'flycheck-elm-read-json (split-string data "\n"))))
+    (let-alist (car mapdata)
+      (if (string= .type "compile-errors")
+          (apply 'append (mapcar (apply-partially 'flycheck-elm-decode-compile-problems checker buffer) .errors))
+        (mapcar (lambda (e) (flycheck-elm-decode-elm-error e checker buffer))
+                (append (car mapdata) (car (cdr mapdata))))))))
 
 (defun flycheck-elm-parse-errors (output checker buffer)
   "Decode elm json output errors."
-  (let* ((data (flycheck-elm-parse-error-data output)))
-    (flycheck-elm-filter-by-preference
-     (mapcar
-      (lambda (x) (flycheck-elm-decode-elm-error x checker buffer))
-      data))))
+  (let* ((data (flycheck-elm-parse-error-data output checker buffer)))
+    (flycheck-elm-filter-by-preference data)))
 
 (defun flycheck-elm-filter-by-preference (lst)
   "Filter the lst by user preference."
