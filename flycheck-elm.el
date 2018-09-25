@@ -170,10 +170,8 @@ project. The main elm file is the .elm file which contains a
   :type '(string))
 
 (flycheck-define-checker elm
-  "A syntax checker for elm-mode using the json output from elm-make.
-Users of Elm 0.19 should set `flycheck-elm-executable' to \"elm\", e.g.
-via customization or per-project directory-local variables."
-  :command ("elm-make"
+  "A syntax checker for elm-mode using the json output from \"elm make\"."
+  :command ("elm"
             (eval (and flycheck-elm-executable
                        (not (string-match-p "elm-make" flycheck-elm-executable))
                        "make"))
