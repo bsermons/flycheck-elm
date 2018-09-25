@@ -1,4 +1,4 @@
-;;; flycheck-elm.el --- Flycheck support for the elm language
+;;; flycheck-elm.el --- Flycheck support for the elm language  -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2015 Brian Sermons
 
