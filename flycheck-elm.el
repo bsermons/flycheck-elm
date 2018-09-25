@@ -1,9 +1,9 @@
-;;; flycheck-elm.el --- Flycheck support for the elm language
+;;; flycheck-elm.el --- Flycheck support for the elm language  -*- lexical-binding: t -*-
 
 ;; Copyright (c) 2015 Brian Sermons
 
 ;; Author: Brian Sermons
-;; Package-Requires: ((flycheck "0.29-cvs") (emacs "24.4"))
+;; Package-Requires: ((flycheck "0.29-cvs") (emacs "24.4") (let-alist "1.0.5") (seq "2.20"))
 ;; URL: https://github.com/bsermons/flycheck-elm
 
 ;; This file is not part of GNU Emacs.
@@ -31,9 +31,10 @@
 
 ;;; Code:
 
-(require 'cl-lib)
+(require 'seq)
 (require 'json)
 (require 'flycheck)
+(require 'let-alist)
 
 (defgroup flycheck-elm nil
   "Elm support for Flycheck."
@@ -50,21 +51,45 @@
   :group 'flycheck-elm)
 
 (defun flycheck-elm-decode-elm-error (error checker buffer)
-  (let* ((region (assoc 'region error))
-         (tag (concat "[" (cdr (assoc 'tag error)) "]"))
-         (overview (cdr (assoc 'overview error)))
-         (details (cdr (assoc 'details error)))
-         (start (assoc 'start region))
-         (start-col (cdr (assoc 'column start)))
-         (start-line (cdr (assoc 'line start))))
+  (let-alist error
     (flycheck-error-new
      :checker checker
      :buffer buffer
-     :filename (cdr (assoc 'file error))
-     :line start-line
-     :column start-col
-     :message (mapconcat 'identity (list tag overview details) "\n")
+     :filename .file
+     :line .region.start.line
+     :column .region.start.column
+     :message (mapconcat 'identity (list (concat "[" .tag "]") .overview .details) "\n")
      :level (flycheck-elm-decode-type error))))
+
+(defun flycheck-elm-decode-compile-problems (checker buffer error)
+  "Extract problems as flycheck errors from Elm 0.19 compile-errors item ERROR."
+  (let-alist error
+    (let ((path
+           (with-current-buffer buffer
+             (file-relative-name
+              (expand-file-name .path (or (flycheck-elm-package-json-directory checker)
+                                          default-directory))))))
+      (mapcar (lambda (p)
+                (let-alist p
+                  (flycheck-error-new
+                   :checker checker
+                   :buffer buffer
+                   :filename path
+                   :line .region.start.line
+                   :column .region.start.column
+                   :message (concat .title ": " (flycheck-elm-flatten-message .message))
+                   :level 'error)))
+              .problems))))
+
+(defun flycheck-elm-flatten-message (msg)
+  "Convert MSG, which is a list of strings or alists describing styled strings, to a single string."
+  (mapconcat (lambda (part)
+               (if (stringp part)
+                   part
+                 (let-alist part
+                   .string)))
+             msg
+             ""))
 
 (defun flycheck-elm-decode-type (error)
   (let ((type (cdr (assoc 'type error))))
@@ -74,30 +99,27 @@
       (_ 'unknown))))
 
 (defun flycheck-elm-read-json (str)
-  (condition-case nil
-      (json-read-from-string str)
-    (error nil)))
+  (ignore-errors
+    (let ((json-array-type 'list))
+      (json-read-from-string str))))
 
-(defun flycheck-elm-parse-error-data (data)
-  (let* ((json-array-type 'list)
-         (mapdata (mapcar
-                   'flycheck-elm-read-json
-                   (split-string data "\n"))))
-    (append (car mapdata) (car (cdr mapdata)))))
+(defun flycheck-elm-parse-error-data (data checker buffer)
+  (let ((mapdata (mapcar 'flycheck-elm-read-json (split-string data "\n"))))
+    (let-alist (car mapdata)
+      (if (string= .type "compile-errors")
+          (apply 'append (mapcar (apply-partially 'flycheck-elm-decode-compile-problems checker buffer) .errors))
+        (mapcar (lambda (e) (flycheck-elm-decode-elm-error e checker buffer))
+                (append (car mapdata) (car (cdr mapdata))))))))
 
 (defun flycheck-elm-parse-errors (output checker buffer)
   "Decode elm json output errors."
-  (let* ((data (flycheck-elm-parse-error-data output))
-         (errors (flycheck-elm-filter-by-preference data)))
-    (mapcar
-     (lambda (x) (flycheck-elm-decode-elm-error x checker buffer))
-     errors)))
+  (let* ((data (flycheck-elm-parse-error-data output checker buffer)))
+    (flycheck-elm-filter-by-preference data)))
 
-(defun flycheck-elm-filter-by-preference (lst &optional pref)
+(defun flycheck-elm-filter-by-preference (lst)
   "Filter the lst by user preference."
   (let ((errors (flycheck-elm-filter-by-type 'error lst)))
-    (or pref (set 'pref flycheck-elm-reporting-mode))
-    (pcase pref
+    (pcase flycheck-elm-reporting-mode
       (`errors-only errors)
       (`warn-after-errors
        (pcase (length errors)
@@ -107,13 +129,15 @@
 
 (defun flycheck-elm-filter-by-type (type lst)
   "Return a new LIST of errors of type TYPE."
-  (cl-remove-if-not
-   (lambda (x)(equal (flycheck-elm-decode-type x) type))
+  (seq-filter
+   (lambda (x) (equal (flycheck-error-level x) type))
    lst))
 
 (defun flycheck-elm-package-json-directory (&optional checker)
   "Find the directory in which CHECKER should run \"elm-make\"."
-  (locate-dominating-file default-directory "elm-package.json"))
+  (or
+   (locate-dominating-file default-directory "elm.json")
+   (locate-dominating-file default-directory "elm-package.json")))
 
 (flycheck-def-option-var flycheck-elm-output-file nil elm
   "The output file to compile to when performing syntax checking.
@@ -146,8 +170,12 @@ project. The main elm file is the .elm file which contains a
   :type '(string))
 
 (flycheck-define-checker elm
-  "A syntax checker for elm-mode using the json output from elm-make"
-  :command ("elm-make" "--report=json"
+  "A syntax checker for elm-mode using the json output from \"elm make\"."
+  :command ("elm"
+            (eval (and flycheck-elm-executable
+                       (not (string-match-p "elm-make" flycheck-elm-executable))
+                       "make"))
+            "--report=json"
             (eval (or flycheck-elm-main-file buffer-file-name))
             (eval (concat  "--output=" (or flycheck-elm-output-file "/dev/null"))))
   :error-parser flycheck-elm-parse-errors
