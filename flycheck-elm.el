@@ -64,11 +64,7 @@
 (defun flycheck-elm-decode-compile-problems (checker buffer error)
   "Extract problems as flycheck errors from Elm 0.19 compile-errors item ERROR."
   (let-alist error
-    (let ((path
-           (with-current-buffer buffer
-             (file-relative-name
-              (expand-file-name .path (or (flycheck-elm-package-json-directory checker)
-                                          default-directory))))))
+    (let ((path .path))
       (mapcar (lambda (p)
                 (let-alist p
                   (flycheck-error-new
