@@ -168,9 +168,9 @@ project. The main elm file is the .elm file which contains a
 (flycheck-define-checker elm
   "A syntax checker for elm-mode using the json output from \"elm make\"."
   :command ("elm"
-            (eval (and flycheck-elm-executable
-                       (not (string-match-p "elm-make" flycheck-elm-executable))
-                       "make"))
+            (eval (unless (and flycheck-elm-executable
+                               (string-match-p "elm-make" flycheck-elm-executable))
+                    "make"))
             "--report=json"
             (eval (or flycheck-elm-main-file buffer-file-name))
             (eval (concat  "--output=" (or flycheck-elm-output-file "/dev/null"))))
