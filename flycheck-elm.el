@@ -106,9 +106,7 @@
       (if (string= .type "compile-errors")
           (apply 'append (mapcar (apply-partially 'flycheck-elm-decode-compile-problems checker buffer) .errors))
         (if (and (string= .type "error") .path)
-            (progn
-              (message "%S" (car mapdata))
-              (list (flycheck-elm-0.19-decode-elm-error checker buffer .path (car mapdata))))
+            (list (flycheck-elm-0.19-decode-elm-error checker buffer .path (car mapdata)))
           (mapcar (lambda (e) (flycheck-elm-decode-elm-error e checker buffer))
                   (append (car mapdata) (car (cdr mapdata)))))))))
 
