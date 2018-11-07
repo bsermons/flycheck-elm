@@ -127,6 +127,26 @@ These names seem close though:
     toYear" (flycheck-error-message err)))
       )))
 
+(ert-deftest test-parse-new-top-level-errors ()
+  "Test parsing of Elm 0.19 top-level make errors."
+  (let ((parsed (parse-with-pref unknown-import-error 'all)))
+    (should (= 1 (length parsed)))
+    (let ((err (car parsed)))
+      (should (eq 'error (flycheck-error-level err)))
+      (should (string= "src/Common/Dates.elm" (flycheck-error-filename err)))
+      (should (eq 1 (flycheck-error-line err)))
+      (should (eq 0 (flycheck-error-column err)))
+      (should (string= "UNKNOWN IMPORT: The Common.Dates module has a bad import:
+
+    import Date.Extra.Format
+
+I cannot find that module! Is there a typo in the module name?
+
+The \"source-directories\" field of your elm.json tells me to only look in the src
+directory, but it is not there. Maybe it is in a package that is not installed
+yet?" (flycheck-error-message err)))
+      )))
+
 ;; Example errors
 
 (setq single-error  "[{\"subregion\":null,\"suggestions\":[],\"details\":\"\",\"region\":{\"end\":{\"column\":12,\"line\":3},\"start\":{\"column\":8,\"line\":3}},\"type\":\"error\",\"file\":\"Sample.elm\",\"tag\":\"NAMING ERROR\",\"overview\":\"Cannot find variable `text`\"}]")
@@ -138,5 +158,7 @@ These names seem close though:
 (setq warnings-only "[{\"details\":\"\",\"region\":{\"end\":{\"column\":40,\"line\":4},\"start\":{\"column\":1,\"line\":4}},\"type\":\"warning\",\"file\":\"g:/projects/test/scripts/Website.elm\",\"tag\":\"unused import\",\"overview\":\"Module `Html.Attributes` is unused.\"},{\"details\":\"The type annotation you want looks something like this:\\n\\n    init :\\n        { login :\\n              { errors : List a\\n              , login : String\\n              , loginDisabled : Bool\\n              , password : String\\n              , response : Maybe b\\n              , signinAttempts : number\\n              }\\n        }\",\"region\":{\"end\":{\"column\":6,\"line\":28},\"start\":{\"column\":1,\"line\":26}},\"type\":\"warning\",\"file\":\"g:/projects/test/scripts/Website.elm\",\"tag\":\"missing type annotation\",\"overview\":\"Top-level value `init` does not have a type annotation.\"},{\"details\":\"The type annotation you want looks something like this:\\n\\n    update :\\n        Action\\n        -> { a | login : LoginViewModel } -> { a | login : LoginViewModel }\",\"region\":{\"end\":{\"column\":60,\"line\":34},\"start\":{\"column\":1,\"line\":31}},\"type\":\"warning\",\"file\":\"g:/projects/test/scripts/Website.elm\",\"tag\":\"missing type annotation\",\"overview\":\"Top-level value `update` does not have a type annotation.\"},{\"details\":\"The type annotation you want looks something like this:\\n\\n    loginSuccessHandler : LoginResponse -> Task a ()\",\"region\":{\"end\":{\"column\":60,\"line\":40},\"start\":{\"column\":1,\"line\":37}},\"type\":\"warning\",\"file\":\"g:/projects/test/scripts/Website.elm\",\"tag\":\"missing type annotation\",\"overview\":\"Top-level value `loginSuccessHandler` does not have a type annotation.\"},{\"details\":\"The type annotation you want looks something like this:\\n\\n    view :\\n        (a, b)\\n        -> { c |\\n               login :\\n                   { errors : List (String, String)\\n                   , login : String\\n                   , loginDisabled : Bool\\n                   , password : String\\n                   , signinAttempts : Int\\n                   , response : Maybe LoginResponse\\n                   }\\n               }\\n        -> Html\",\"region\":{\"end\":{\"column\":51,\"line\":46},\"start\":{\"column\":1,\"line\":43}},\"type\":\"warning\",\"file\":\"g:/projects/test/scripts/Website.elm\",\"tag\":\"missing type annotation\",\"overview\":\"Top-level value `view` does not have a type annotation.\"},{\"details\":\"The type annotation you want looks something like this:\\n\\n    model : Signal { login : LoginViewModel }\",\"region\":{\"end\":{\"column\":34,\"line\":50},\"start\":{\"column\":1,\"line\":48}},\"type\":\"warning\",\"file\":\"g:/projects/test/scripts/Website.elm\",\"tag\":\"missing type annotation\",\"overview\":\"Top-level value `model` does not have a type annotation.\"},{\"details\":\"The type annotation you want looks something like this:\\n\\n    main : a -> b -> Signal Html\",\"region\":{\"end\":{\"column\":45,\"line\":53},\"start\":{\"column\":1,\"line\":52}},\"type\":\"warning\",\"file\":\"g:/projects/test/scripts/Website.elm\",\"tag\":\"missing type annotation\",\"overview\":\"Top-level value `main` does not have a type annotation.\"}]")
 
 (setq new-compile-errors "{\"type\":\"compile-errors\",\"errors\":[{\"path\":\"src/Main.elm\",\"name\":\"Main\",\"problems\":[{\"title\":\"BAD IMPORT\",\"region\":{\"start\":{\"line\":10,\"column\":23},\"end\":{\"line\":10,\"column\":27}},\"message\":[\"The `Time` module does not expose `very`:\\n\\n10| import Time exposing (very)\\n                          \",{\"bold\":false,\"underline\":false,\"color\":\"red\",\"string\":\"^^^^\"},\"\\nThese names seem close though:\\n\\n    \",{\"bold\":false,\"underline\":false,\"color\":\"yellow\",\"string\":\"here\"},\"\\n    \",{\"bold\":false,\"underline\":false,\"color\":\"yellow\",\"string\":\"now\"},\"\\n    \",{\"bold\":false,\"underline\":false,\"color\":\"yellow\",\"string\":\"toDay\"},\"\\n    \",{\"bold\":false,\"underline\":false,\"color\":\"yellow\",\"string\":\"toYear\"},\"\"]}]}]}")
+
+(setq unknown-import-error "{\"type\":\"error\",\"path\":\"src/Common/Dates.elm\",\"title\":\"UNKNOWN IMPORT\",\"message\":[\"The Common.Dates module has a bad import:\\n\\n    \",{\"bold\":false,\"underline\":false,\"color\":\"RED\",\"string\":\"import Date.Extra.Format\"},\"\\n\\nI cannot find that module! Is there a typo in the module name?\\n\\nThe \\\"source-directories\\\" field of your elm.json tells me to only look in the src\\ndirectory, but it is not there. Maybe it is in a package that is not installed\\nyet?\"]}")
 
 ;;; flycheck-elm-tests.el ends here
